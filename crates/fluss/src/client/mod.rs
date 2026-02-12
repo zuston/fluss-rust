@@ -15,12 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-mod admin;
-mod connection;
-mod credentials;
-mod metadata;
-mod table;
-mod write;
+pub mod admin;
+pub mod connection;
+pub mod credentials;
+pub mod metadata;
+pub mod table;
+pub mod write;
 
 pub use admin::*;
 pub use connection::*;

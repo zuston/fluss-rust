@@ -15,8 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-mod accumulator;
-mod batch;
+pub mod accumulator;
+pub mod batch;
 
 use crate::client::broadcast::{self as client_broadcast, BatchWriteResult, BroadcastOnceReceiver};
 use crate::error::Error;
@@ -32,11 +32,11 @@ use std::sync::Arc;
 use std::task::{Context, Poll};
 
 pub(crate) mod broadcast;
-mod bucket_assigner;
+pub mod bucket_assigner;
 
-mod sender;
-mod write_format;
-mod writer_client;
+pub mod sender;
+pub mod write_format;
+pub mod writer_client;
 
 pub use write_format::WriteFormat;
 pub use writer_client::WriterClient;

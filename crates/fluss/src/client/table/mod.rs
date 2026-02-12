@@ -24,14 +24,14 @@ use std::sync::Arc;
 pub const EARLIEST_OFFSET: i64 = -2;
 pub const LATEST_OFFSET: i64 = -1;
 
-mod append;
-mod lookup;
+pub mod append;
+pub mod lookup;
 
-mod log_fetch_buffer;
-mod partition_getter;
-mod remote_log;
-mod scanner;
-mod upsert;
+pub mod log_fetch_buffer;
+pub mod partition_getter;
+pub mod remote_log;
+pub mod scanner;
+pub mod upsert;
 
 pub use append::{AppendWriter, TableAppend};
 pub use lookup::{LookupResult, Lookuper, TableLookup};
