@@ -25,6 +25,7 @@ pub const EARLIEST_OFFSET: i64 = -2;
 pub const LATEST_OFFSET: i64 = -1;
 
 mod append;
+mod kv_scanner;
 mod lookup;
 
 mod log_fetch_buffer;
@@ -34,6 +35,7 @@ mod scanner;
 mod upsert;
 
 pub use append::{AppendWriter, TableAppend};
+pub use kv_scanner::{KvBatchScanner, KvScanBatch};
 pub use lookup::{LookupResult, Lookuper, TableLookup};
 pub use remote_log::{
     DEFAULT_REMOTE_FILE_DOWNLOAD_THREAD_NUM, DEFAULT_SCANNER_REMOTE_LOG_PREFETCH_NUM,

@@ -24,8 +24,10 @@ use std::collections::HashMap;
 mod arrow;
 mod error;
 pub mod kv;
+mod value_record_batch;
 
 pub use arrow::*;
+pub use value_record_batch::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ChangeType {

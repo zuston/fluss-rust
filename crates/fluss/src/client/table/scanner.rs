@@ -29,6 +29,7 @@ use tempfile::TempDir;
 use crate::client::connection::FlussConnection;
 use crate::client::credentials::SecurityTokenManager;
 use crate::client::metadata::Metadata;
+use crate::client::table::kv_scanner::KvBatchScanner;
 use crate::client::table::log_fetch_buffer::{
     CompletedFetch, DefaultCompletedFetch, FetchErrorAction, FetchErrorContext, FetchErrorLogLevel,
     LogFetchBuffer, RemotePendingFetch,
@@ -57,6 +58,8 @@ pub struct TableScan<'a> {
     metadata: Arc<Metadata>,
     /// Column indices to project. None means all columns, Some(vec) means only the specified columns (non-empty).
     projected_fields: Option<Vec<usize>>,
+    /// Maximum number of rows to return per KV scan batch.
+    limit: Option<i32>,
 }
 
 impl<'a> TableScan<'a> {
@@ -66,6 +69,7 @@ impl<'a> TableScan<'a> {
             table_info,
             metadata,
             projected_fields: None,
+            limit: None,
         }
     }
 
@@ -220,6 +224,19 @@ impl<'a> TableScan<'a> {
         Ok(self)
     }
 
+    /// Sets max number of rows returned by each PK table KV scan batch.
+    ///
+    /// This limit is used by [`TableScan::create_kv_batch_scanner`].
+    pub fn limit(mut self, limit: i32) -> Result<Self> {
+        if limit <= 0 {
+            return Err(Error::IllegalArgument {
+                message: format!("Limit must be positive, but got {limit}"),
+            });
+        }
+        self.limit = Some(limit);
+        Ok(self)
+    }
+
     pub fn create_log_scanner(self) -> Result<LogScanner> {
         validate_scan_support(&self.table_info.table_path, &self.table_info)?;
         let inner = LogScannerInner::new(
@@ -246,6 +263,35 @@ impl<'a> TableScan<'a> {
         Ok(RecordBatchLogScanner {
             inner: Arc::new(inner),
         })
+    }
+
+    /// Creates a PK table KV batch scanner for limit scan.
+    ///
+    /// Use this API for primary-key tables. It is unsupported for log tables.
+    pub fn create_kv_batch_scanner(self, table_bucket: TableBucket) -> Result<KvBatchScanner> {
+        validate_kv_scan_support(&self.table_info.table_path, &self.table_info)?;
+        let limit = self.limit.ok_or_else(|| Error::IllegalArgument {
+            message: "limit must be set before create_kv_batch_scanner".to_string(),
+        })?;
+
+        if table_bucket.table_id() != self.table_info.get_table_id() {
+            return Err(Error::IllegalArgument {
+                message: format!(
+                    "Table bucket {} does not belong to table {} (id={})",
+                    table_bucket,
+                    self.table_info.table_path,
+                    self.table_info.get_table_id()
+                ),
+            });
+        }
+
+        Ok(KvBatchScanner::new(
+            self.conn.get_connections(),
+            self.table_info,
+            self.metadata,
+            table_bucket,
+            limit,
+        ))
     }
 }
 
@@ -1669,6 +1715,17 @@ fn validate_scan_support(table_path: &TablePath, table_info: &TableInfo) -> Resu
     Ok(())
 }
 
+fn validate_kv_scan_support(table_path: &TablePath, table_info: &TableInfo) -> Result<()> {
+    if table_info.schema.primary_key().is_none() {
+        return Err(UnsupportedOperation {
+            message: format!(
+                "Table {table_path} is not a Primary Key Table and doesn't support KV scan."
+            ),
+        });
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1964,5 +2021,28 @@ mod tests {
         let (table_info, table_path) = create_test_table_info(false, Some("ARROW"));
         let result = validate_scan_support(&table_path, &table_info);
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_kv_scan_support() {
+        // PK table should support KV scan
+        let (table_info, table_path) = create_test_table_info(true, Some("ARROW"));
+        let result = validate_kv_scan_support(&table_path, &table_info);
+        assert!(result.is_ok());
+
+        // Log table should not support KV scan
+        let (table_info, table_path) = create_test_table_info(false, Some("ARROW"));
+        let result = validate_kv_scan_support(&table_path, &table_info);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err, UnsupportedOperation { .. }));
+        assert!(
+            err.to_string().contains(
+                format!(
+                    "Table {table_path} is not a Primary Key Table and doesn't support KV scan."
+                )
+                .as_str()
+            )
+        );
     }
 }

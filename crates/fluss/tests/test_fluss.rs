@@ -24,6 +24,7 @@ mod integration {
     mod fluss_cluster;
     mod kv_table;
     mod log_table;
+    mod pk_limit_scan;
 
     mod utils;
 

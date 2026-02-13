@@ -348,6 +348,22 @@ message GetFileSystemSecurityTokenResponse {
   repeated PbKeyValue addition_info = 4;
 }
 
+message LimitScanRequest {
+  required int64 table_id = 2;
+  optional int64 partition_id = 3;
+  required int32 bucket_id = 4;
+  required int32 limit = 5;
+}
+
+message LimitScanResponse {
+  optional int32 error_code = 1;
+  optional string error_message = 2;
+  // flag to indicate the table type
+  optional bool is_log_table = 3;
+  // LogRecordBatch if is_log_table is true, otherwise KvRecordBatch
+  optional bytes records = 4;
+}
+
 // lookup request and response
 message LookupRequest {
   required int64 table_id = 1;
