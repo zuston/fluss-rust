@@ -303,8 +303,12 @@ impl TableLookup {
         let lookup_row_type = row_type.project_with_field_names(primary_keys)?;
 
         let physical_primary_keys = self.table_info.get_physical_primary_keys().to_vec();
-        let primary_key_encoder =
-            KeyEncoderFactory::of(&lookup_row_type, &physical_primary_keys, &data_lake_format)?;
+        let primary_key_encoder = KeyEncoderFactory::of_primary_key(
+            &lookup_row_type,
+            &physical_primary_keys,
+            self.table_info.get_table_config(),
+            self.table_info.is_default_bucket_key(),
+        )?;
 
         let bucket_key_encoder = if self.table_info.is_default_bucket_key() {
             None

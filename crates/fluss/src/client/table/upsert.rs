@@ -143,7 +143,12 @@ impl UpsertWriterFactory {
             &partial_update_columns,
         )?;
 
-        let primary_key_encoder = KeyEncoderFactory::of(row_type, physical_pks, data_lake_format)?;
+        let primary_key_encoder = KeyEncoderFactory::of_primary_key(
+            row_type,
+            physical_pks,
+            table_info.get_table_config(),
+            table_info.is_default_bucket_key(),
+        )?;
         let bucket_key_encoder = if !table_info.is_default_bucket_key() {
             Some(KeyEncoderFactory::of(
                 row_type,
